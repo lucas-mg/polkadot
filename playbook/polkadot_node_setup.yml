@@ -1,0 +1,47 @@
+---
+- name: Polkadot Node Setup
+  hosts: polkadot_nodes
+  become: true
+
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install necessary packages
+      apt:
+        name:
+          - curl
+          - unzip
+        state: present
+
+    - name: Download and install Polkadot binary
+      get_url:
+        url: "https://github.com/paritytech/polkadot/releases/download/v<VERSION>/polkadot"
+        dest: /usr/local/bin/polkadot
+        mode: "0755"
+
+    - name: Create Polkadot user
+      user:
+        name: polkadot
+        home: /home/polkadot
+        shell: /bin/bash
+        createhome: yes
+
+    - name: Create systemd service for Polkadot
+      systemd:
+        name: polkadot
+        enabled: yes
+        state: started
+        daemon_reload: yes
+        unit_file_content: |
+          [Unit]
+          Description=Polkadot Node
+
+          [Service]
+          ExecStart=/usr/local/bin/polkadot --name <NODE_NAME> --validator --chain kusama
+          Restart=always
+          User=polkadot
+
+          [Install]
+          WantedBy=default.target
